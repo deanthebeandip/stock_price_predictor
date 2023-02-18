@@ -1,6 +1,8 @@
 import pandas as pd
 import yfinance as yf
 import datetime
+from datetime import date
+
 import time
 import requests
 import io
@@ -11,6 +13,8 @@ import numpy as np
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import layers
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 
 # Helper Function Zone
@@ -23,12 +27,8 @@ def str_to_datetime(s):
   return datetime.datetime(year=year, month=month, day=day)
 
 
-
-
-
-
-
-def df_to_windowed_df(dataframe, first_date_str, last_date_str, n=3):
+# YT Functions to create window Dataframes.
+def df_to_windowed_df(dataframe, first_date_str, last_date_str, n, var_1d):
     first_date = str_to_datetime(first_date_str)
     last_date  = str_to_datetime(last_date_str)
 
@@ -45,7 +45,7 @@ def df_to_windowed_df(dataframe, first_date_str, last_date_str, n=3):
             print(f'Error: Window of size {n} is too large for date {target_date}')
             return
 
-        values = df_subset['Close'].to_numpy()
+        values = df_subset[var_1d].to_numpy()
         x, y = values[:-1], values[-1]
 
         dates.append(target_date)
@@ -88,115 +88,143 @@ def windowed_df_to_date_X_y(windowed_dataframe):
 
 
 
-# evaluate model's stock prediction performance
-def evaluate(ticker, start_date):
-    today = str(datetime.date.today())
-    tom = str(datetime.date.today()+ datetime.timedelta(days=1))
-    trail = 10
 
-    df = yf.download("VOO", #UPDATE
-                # start="2010-09-09", 
-                start= start_date, #UPDATE
-                end=tom,#UPDATE
-                # fetch data by interval (including intraday if period < 60 days)
-                # valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
-                interval = "1d")
-    # data['Close'].tail(n=5).to_list(
-    # data["High"].plot()
-    # plt.show()
+def download_price(ticker, start_date, var_1D): #Download stock price data
+    tom = str(datetime.date.today()+ datetime.timedelta(days=1))
+    df = yf.download(ticker, 
+                start= start_date, 
+                end=tom,
+                interval = "1d")# valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
+
     df.reset_index(inplace=True)
     df = df.rename(columns = {'index':'Date'})
-
     # df = df[['Date', 'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume']]
-    df = df[['Date', 'Close']]
+    df = df[['Date', var_1D]]
     df['Date'] = df['Date'].apply(pd_tmstmp_to_str) # convert timestamp to string
     df['Date'] = df['Date'].apply(str_to_datetime) # convert string to datetime
     df.index = df.pop('Date')
 
-    # plt.plot(df.index, df['Close'])
-    # plt.show()
+    return df
 
-    # '2020-04-01',
+def create_window(stock_dataframe, runway, window_start_date, var_1d):
+    window_start_date = str(str_to_datetime(window_start_date)+ datetime.timedelta(days=runway))[:10]
+    end_date = str(datetime.date.today())
+    wday = date.today().weekday()
+    if wday == 5 or wday == 6: end_date = str(datetime.date.today()- datetime.timedelta(days=(wday-4)))
 
-    # Seems like windowed df is the problem, keeps getting stuck
-    windowed_df = df_to_windowed_df(df, 
-                                '2023-02-01', #UPDATE (make sure range makes sense, target date + n for this date)
-                                today, #UPDATE (don't put tomorrow, it doesn't like that)
-                                trail) #UPDATE
+    windowed_df = df_to_windowed_df(stock_dataframe, 
+                                window_start_date, #UPDATE (make sure range makes sense, target date + n for this date)
+                                end_date, # ONLY ACCEPTS TRADING DAYS
+                                runway,
+                                var_1d) 
     
     print("Finished windowed df")
     dates, X, y = windowed_df_to_date_X_y(windowed_df)
     print("Finished windowed df to date X y")
 
+    return dates, X, y
+
+# Parse the data into train, validation, and test sets
+def train_data(dates, X, y, train_end, val_end):
+    q_80 = int(len(dates) * train_end)
+    q_90 = int(len(dates) * val_end)
+    return dates[:q_80], X[:q_80], y[:q_80]
+def val_data(dates, X, y, train_end, val_end):
+    q_80 = int(len(dates) * train_end)
+    q_90 = int(len(dates) * val_end)
+    return dates[q_80:q_90], X[q_80:q_90], y[q_80:q_90]
+def test_data(dates, X, y, train_end, val_end):
+    q_80 = int(len(dates) * train_end)
+    q_90 = int(len(dates) * val_end)
+    return dates[q_90:], X[q_90:], y[q_90:]
 
 
-    q_80 = int(len(dates) * .8)#UPDATE
-    q_90 = int(len(dates) * .9)#UPDATE
+def model_training_room(X_train, y_train, X_val, y_val, trail, epochs_input, avt_input, lstm_layers, lstm_d1_layers, lstm_d2_layers, loss_input, lr, metrics_input):
+    model = Sequential([layers.Input((trail, 1)),
+                layers.LSTM(lstm_layers),
+                layers.Dense(lstm_d1_layers, activation= avt_input),#UPDATE
+                layers.Dense(lstm_d2_layers, activation= avt_input),#UPDATE
+                layers.Dense(1)])
 
-    dates_train, X_train, y_train = dates[:q_80], X[:q_80], y[:q_80]
+    model.compile(loss=loss_input, 
+                optimizer=Adam(learning_rate=lr),#UPDATE
+                metrics=[metrics_input])#UPDATE
 
-    dates_val, X_val, y_val = dates[q_80:q_90], X[q_80:q_90], y[q_80:q_90]
-    dates_test, X_test, y_test = dates[q_90:], X[q_90:], y[q_90:]
-
-    # plt.plot(dates_train, y_train)
-    # plt.plot(dates_val, y_val)
-    # plt.plot(dates_test, y_test)
-    # plt.legend(['Train', 'Validation', 'Test'])
-    # plt.show()
-
-
-    model = Sequential([layers.Input((trail, 1)),#UPDATE
-                    layers.LSTM(64),
-                    layers.Dense(32, activation='relu'),#UPDATE
-                    layers.Dense(32, activation='relu'),#UPDATE
-                    layers.Dense(1)])
-
-    model.compile(loss='mse', 
-                optimizer=Adam(learning_rate=0.001),#UPDATE
-                metrics=['mean_absolute_error'])#UPDATE
-
-    model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=2)#UPDATE
+    model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=epochs_input)
     # model.fit(tf.expand_dims(X, axis=-1),y,epochs=10)
+    return model
+    
+def plot_train_predictions(model, dates_train, X_train, y_train):
     train_predictions = model.predict(X_train).flatten()
-    print(train_predictions)
+    print_train = 0
+    if print_train:
+        plt.plot(dates_train, train_predictions)
+        plt.plot(dates_train, y_train)
+        plt.legend(['Training Predictions', 'Training Observations'])
+        plt.show()
 
-
-
-    '''
-    plt.plot(dates_train, train_predictions)
-    plt.plot(dates_train, y_train)
-    plt.legend(['Training Predictions', 'Training Observations'])
-    # plt.show()
-
+def plot_val_predictions(model, dates_val, X_val, y_val):
     val_predictions = model.predict(X_val).flatten()
+    print_val = 0
+    if print_val:
+        plt.plot(dates_val, val_predictions)
+        plt.plot(dates_val, y_val)
+        plt.legend(['Validation Predictions', 'Validation Observations'])
+        plt.show()
 
-    plt.plot(dates_val, val_predictions)
-    plt.plot(dates_val, y_val)
-    plt.legend(['Validation Predictions', 'Validation Observations'])
-    # plt.show()
 
-    figure(figsize=(20, 6), dpi=80)
+def plot_test_predictions(model, dates_test, X_test, y_test):
     test_predictions = model.predict(X_test).flatten()
-
-    plt.plot(dates_test, test_predictions)
-    plt.plot(dates_test, y_test)
-    plt.grid(axis="x")
-
-
-    plt.legend(['Testing Predictions', 'Testing Observations'])
-    plt.show()
-    '''
-
-def command_center():
-    ticker = "VOO"
-    start_date = "2010-09-09"
-    evaluate(ticker, start_date)
-
-    # try each "trail", return the score for each trail.
-    # Try this for different models!
+    print_test = 1
+    if print_test:
+        figure(figsize=(20, 6), dpi=80)
+        plt.plot(dates_test, test_predictions)
+        plt.plot(dates_test, y_test)
+        plt.legend(['Testing Predictions', 'Testing Observations'])
+        plt.show()
 
 
 
+def command_center(): # Fill in parameters in the beginning
+    # Stock Input Parameters
+    ticker = "VOO"                      # What stock u want?
+    stock_genesis_date = '2010-09-09'   # When did the stock start trading?
+    window_start_date = '2020-06-01'    # Model Training start date
+    runway = 14                         # How many days to guess tmrw's price?
+    var_1d = 'Low'    #'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume'
+    
+    # Model Input Parameters
+    train_end = .75                      #Where to stop training data
+    val_end = .85                        #Where to stop validation data
+    epochs = 100
+    activation = 'relu'
+    lstm_layers = 64
+    lstm_d1_layers = 32
+    lstm_d2_layers = 32
+    loss_input = 'mse'
+    lr = 0.001
+    metrics_input = 'mean_absolute_error'
+
+
+
+    # Grab Stock Price DataFrame
+    stock_df = download_price(ticker, stock_genesis_date, var_1d)
+    # Create Windowed DataFrame (using YT method)
+    dates, X, y = create_window(stock_df, runway, window_start_date, var_1d)
+    # Split into train, val, test
+    dates_train, X_train, y_train = train_data(dates, X, y, train_end, val_end)
+    dates_val, X_val, y_val = val_data(dates, X, y, train_end, val_end)
+    dates_test, X_test, y_test = test_data(dates, X, y, train_end, val_end)
+    # Train the model with given paramters
+    model = model_training_room(X_train, y_train, X_val, y_val, runway, epochs, activation, 
+                                lstm_layers, lstm_d1_layers, lstm_d2_layers, loss_input, 
+                                lr, metrics_input)
+
+
+    #Use the model to evaluate the test data
+    plot_train_predictions(model, dates_train, X_train, y_train)
+    plot_val_predictions(model, dates_val, X_val, y_val)
+    plot_test_predictions(model, dates_test, X_test, y_test)
 
 
 def main():
