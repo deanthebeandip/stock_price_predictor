@@ -1,4 +1,7 @@
-Just go look at the command center function
+How to Use this tool...
 
-That's where you could mess around with the raw variables.
+Basically, all you need to do is plug in these raw variables and a whole experiment will happen.
+Almost like an API I guess, but more hands on.
 
+    
+    

@@ -173,39 +173,40 @@ def plot_val_predictions(model, dates_val, X_val, y_val):
         plt.show()
 
 
+def model_evaluation(pred, obs):
+    scores = []
+
+    for i in range(len(pred)):
+        print(abs((pred[i]-obs[i])/obs[i]))
+
+
+
+
+    return scores
+
 def plot_test_predictions(model, dates_test, X_test, y_test):
     test_predictions = model.predict(X_test).flatten()
-    print_test = 1
+    print(test_predictions, type(test_predictions))
+    print(dates_test, type(dates_test), dates_test[0], type(dates_test[0]))
+    print_test = 0
     if print_test:
         figure(figsize=(20, 6), dpi=80)
         plt.plot(dates_test, test_predictions)
         plt.plot(dates_test, y_test)
+        plt.xticks(dates_test)
+        plt.grid(axis = 'x')
         plt.legend(['Testing Predictions', 'Testing Observations'])
         plt.show()
 
 
+    # Calculate the scoring metrics here!
+    scores = model_evaluation(test_predictions, y_test)
 
-def command_center(): # Fill in parameters in the beginning
-    # Stock Input Parameters
-    ticker = "VOO"                      # What stock u want?
-    stock_genesis_date = '2010-09-09'   # When did the stock start trading?
-    window_start_date = '2020-06-01'    # Model Training start date
-    runway = 14                         # How many days to guess tmrw's price?
-    var_1d = 'Low'    #'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume'
-    
-    # Model Input Parameters
-    train_end = .75                      #Where to stop training data
-    val_end = .85                        #Where to stop validation data
-    epochs = 100
-    activation = 'relu'
-    lstm_layers = 64
-    lstm_d1_layers = 32
-    lstm_d2_layers = 32
-    loss_input = 'mse'
-    lr = 0.001
-    metrics_input = 'mean_absolute_error'
+    return scores
 
-
+# The Pilots Cabin
+def command_center(ticker, stock_genesis_date, window_start_date, runway, 
+                   var_1d, train_end, val_end, epochs, activation, lstm_layers, lstm_d1_layers, lstm_d2_layers, loss_input, lr, metrics_input): # Fill in parameters in the beginning
 
     # Grab Stock Price DataFrame
     stock_df = download_price(ticker, stock_genesis_date, var_1d)
@@ -224,11 +225,30 @@ def command_center(): # Fill in parameters in the beginning
     #Use the model to evaluate the test data
     plot_train_predictions(model, dates_train, X_train, y_train)
     plot_val_predictions(model, dates_val, X_val, y_val)
-    plot_test_predictions(model, dates_test, X_test, y_test)
+    model_scores = plot_test_predictions(model, dates_test, X_test, y_test)
 
 
 def main():
-    command_center()
+    # Stock Input Parameters
+    ticker = "VOO"                      # What stock u want?
+    stock_genesis_date = '2010-09-09'   # When did the stock start trading?
+    window_start_date = '2020-06-01'    # Model Training start date
+    runway = 14                         # How many days to guess tmrw's price?
+    var_1d = 'Low'    #'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume'
+    
+    # Model Input Parameters
+    train_end = .75                      #Where to stop training data
+    val_end = .85                        #Where to stop validation data
+    epochs = 50
+    activation = 'relu'
+    lstm_layers = 64
+    lstm_d1_layers = 32
+    lstm_d2_layers = 32
+    loss_input = 'mse'
+    lr = 0.001
+    metrics_input = 'mean_absolute_error'
+    command_center(ticker, stock_genesis_date, window_start_date, 
+                   runway, var_1d, train_end, val_end, epochs, activation, lstm_layers, lstm_d1_layers, lstm_d2_layers, loss_input, lr, metrics_input)
 
 
 
