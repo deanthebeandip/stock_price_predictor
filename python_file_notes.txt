@@ -4,4 +4,8 @@ Basically, all you need to do is plug in these raw variables and a whole experim
 Almost like an API I guess, but more hands on.
 
     
-    
+Some quick n dirty proof of concept, the inputs will be deposited on an excel table soon
+First store as DB, then I could display the overall performance n shit. This could be fun
+
+Epochs		50  	100  	150  	200  	300  	500  	1000
+avg % off	1.63  	1.23  	1.19  	1.13  	0.94  	0.93  	1.00

@@ -175,19 +175,26 @@ def plot_val_predictions(model, dates_val, X_val, y_val):
 
 def model_evaluation(pred, obs):
     scores = []
+    slopes = []
 
     for i in range(len(pred)):
-        print(abs((pred[i]-obs[i])/obs[i]))
+        scores.append(abs((pred[i]-obs[i])/obs[i]))
+
+        # Work on a metric to penalize differences in price slope
+        # eg slope is actually 2, but predicted 1.25 or something..
+        #         # if i > 0:
+        #     slopes.append(abs((pred[i]-pred[i-1])/pred[i-1]))
 
 
+        # Work on a metric to penalize differences in price 
+        #         # if i > 0:
+        #     slopes.append(abs((pred[i]-pred[i-1])/pred[i-1]))
 
 
-    return scores
+    return 100*sum(scores)/len(scores)
 
 def plot_test_predictions(model, dates_test, X_test, y_test):
     test_predictions = model.predict(X_test).flatten()
-    print(test_predictions, type(test_predictions))
-    print(dates_test, type(dates_test), dates_test[0], type(dates_test[0]))
     print_test = 0
     if print_test:
         figure(figsize=(20, 6), dpi=80)
@@ -205,7 +212,7 @@ def plot_test_predictions(model, dates_test, X_test, y_test):
     return scores
 
 # The Pilots Cabin
-def command_center(ticker, stock_genesis_date, window_start_date, runway, 
+def score_model_api(ticker, stock_genesis_date, window_start_date, runway, 
                    var_1d, train_end, val_end, epochs, activation, lstm_layers, lstm_d1_layers, lstm_d2_layers, loss_input, lr, metrics_input): # Fill in parameters in the beginning
 
     # Grab Stock Price DataFrame
@@ -226,6 +233,8 @@ def command_center(ticker, stock_genesis_date, window_start_date, runway,
     plot_train_predictions(model, dates_train, X_train, y_train)
     plot_val_predictions(model, dates_val, X_val, y_val)
     model_scores = plot_test_predictions(model, dates_test, X_test, y_test)
+    return model_scores
+
 
 
 def main():
@@ -239,7 +248,7 @@ def main():
     # Model Input Parameters
     train_end = .75                      #Where to stop training data
     val_end = .85                        #Where to stop validation data
-    epochs = 50
+    epochs = [50, 100, 150, 200, 300, 500, 1000]
     activation = 'relu'
     lstm_layers = 64
     lstm_d1_layers = 32
@@ -247,9 +256,22 @@ def main():
     loss_input = 'mse'
     lr = 0.001
     metrics_input = 'mean_absolute_error'
-    command_center(ticker, stock_genesis_date, window_start_date, 
-                   runway, var_1d, train_end, val_end, epochs, activation, lstm_layers, lstm_d1_layers, lstm_d2_layers, loss_input, lr, metrics_input)
 
+    score_list = {}
+    for epoch in epochs:
+
+        score = score_model_api(ticker, stock_genesis_date, window_start_date, 
+                    runway, var_1d, train_end, val_end, epoch, activation, lstm_layers, lstm_d1_layers, lstm_d2_layers, loss_input, lr, metrics_input)
+        print("%i avg. error is %f" % (epoch, score))
+        score_list[epoch] = score
+
+    print(score_list)
+
+# Next step:
+# Create an experiment database that contains all the paramters as dimensions
+# Then add the scores as metrics!
+
+# Then I could see which models are giving me the most accurate models
 
 
 if __name__ == '__main__':
