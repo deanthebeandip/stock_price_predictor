@@ -10,9 +10,10 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 import numpy as np
 
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras import layers
+from tensorflow import keras
+from keras.models import Sequential
+from keras.optimizers import Adam
+from keras import layers
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
@@ -235,20 +236,41 @@ def score_model_api(ticker, stock_genesis_date, window_start_date, runway,
     model_scores = plot_test_predictions(model, dates_test, X_test, y_test)
     return model_scores
 
+def get_stock_data(ticker, start_date, end_date):
+    try:
+        # Download historical data
+        stock_data = yf.download(ticker, start=start_date, end=end_date)
 
+        # Extracting the 'Close' prices
+        df = stock_data['Close'].to_frame()
+
+        return df
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
 
 def main():
+    ticker = "AAPL"  # Example stock ticker (Apple Inc.)
+    stock_genesis_date = '2010-09-09'
+    var_1D = 'Close'
+    stock_df = download_price(ticker, stock_genesis_date, var_1D)
+    print(stock_df)
+
+
+
+    ''' 230201 Stuff
     # Stock Input Parameters
     ticker = "VOO"                      # What stock u want?
     stock_genesis_date = '2010-09-09'   # When did the stock start trading?
-    window_start_date = '2020-06-01'    # Model Training start date
-    runway = 14                         # How many days to guess tmrw's price?
+    window_start_date = '2020-06-02'    # Model Training start date
+    runway = 7                         # How many days to guess tmrw's price?
     var_1d = 'Low'    #'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume'
     
     # Model Input Parameters
     train_end = .75                      #Where to stop training data
     val_end = .85                        #Where to stop validation data
-    epochs = [50, 100, 150, 200, 300, 500, 1000]
+    epochs = [50, 100]
+    #epochs = [50, 100,500, 1000]
     activation = 'relu'
     lstm_layers = 64
     lstm_d1_layers = 32
@@ -266,6 +288,8 @@ def main():
         score_list[epoch] = score
 
     print(score_list)
+    '''
+
 
 # Next step:
 # Create an experiment database that contains all the paramters as dimensions
