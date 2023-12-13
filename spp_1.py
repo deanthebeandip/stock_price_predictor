@@ -253,38 +253,50 @@ def get_stock_data(ticker, start_date, end_date):
 
 
 
-def get_stock_prices(symbol, param, start_date, end_date):
+
+def grab_stock(symbol, start_date, end_date):
     try:
         # Download historical stock data
         stock_data = yf.download(symbol, start=start_date, end=end_date)
-
-        # Extract the closing prices
-        stock_prices = stock_data[param]
-
-        return stock_prices
+        return stock_data
 
     except Exception as e:
         print(f"Error: {e}")
         return None
 
 
+def strat_picker(stock_list, history):
+
+
+    end_date = str(datetime.date.today())
+    start_date = str(datetime.datetime.now() - datetime.timedelta(days = history))[:10]
+    
+    for stock in stock_list:
+        prices = grab_stock(stock, start_date, end_date)
+
+        if prices is not None:
+            print(f"Stock prices for {stock} from {start_date} to {end_date}:\n")
+            print(prices)
+            print(type(prices))
+        else:
+            print(f"Failed to retrieve stock prices for {stock}")
+
+
 
 
 def main():
-    # Example usage:
-    stock_symbol = "VOO"  # Replace with the desired stock symbol
-    param = 'Close'
-    start_date = "2022-01-01"  # Replace with the start date
-    end_date = "2023-12-13"  # Replace with the end date
+    #stock_list = ['VOO', 'AAPL', 'AMZN']
+    stock_list = ['VOO']
+    history = 50
+    strat_picker(stock_list, history)
 
 
-    prices = get_stock_prices(stock_symbol, param, start_date, end_date)
+    # Create a List of stocks to track
+    
+    
 
-    if prices is not None:
-        print(f"Stock prices for {stock_symbol} from {start_date} to {end_date}:\n")
-        print(prices)
-    else:
-        print(f"Failed to retrieve stock prices for {stock_symbol}")
+
+
 
 
 # Next step:
