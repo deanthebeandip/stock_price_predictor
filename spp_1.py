@@ -249,13 +249,65 @@ def get_stock_data(ticker, start_date, end_date):
         print(f"An error occurred: {e}")
         return None
 
+
+
+
+
+def get_stock_prices(symbol, param, start_date, end_date):
+    try:
+        # Download historical stock data
+        stock_data = yf.download(symbol, start=start_date, end=end_date)
+
+        # Extract the closing prices
+        stock_prices = stock_data[param]
+
+        return stock_prices
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+
+
+
 def main():
+    # Example usage:
+    stock_symbol = "VOO"  # Replace with the desired stock symbol
+    param = 'Close'
+    start_date = "2022-01-01"  # Replace with the start date
+    end_date = "2023-12-13"  # Replace with the end date
+
+
+    prices = get_stock_prices(stock_symbol, param, start_date, end_date)
+
+    if prices is not None:
+        print(f"Stock prices for {stock_symbol} from {start_date} to {end_date}:\n")
+        print(prices)
+    else:
+        print(f"Failed to retrieve stock prices for {stock_symbol}")
+
+
+# Next step:
+# Create an experiment database that contains all the paramters as dimensions
+# Then add the scores as metrics!
+
+# Then I could see which models are giving me the most accurate models
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+#old main:
+
+    """
     ticker = "AAPL"  # Example stock ticker (Apple Inc.)
     stock_genesis_date = '2010-09-09'
     var_1D = 'Close'
     stock_df = download_price(ticker, stock_genesis_date, var_1D)
     print(stock_df)
-
+    """
 
 
     ''' 230201 Stuff
@@ -289,14 +341,3 @@ def main():
 
     print(score_list)
     '''
-
-
-# Next step:
-# Create an experiment database that contains all the paramters as dimensions
-# Then add the scores as metrics!
-
-# Then I could see which models are giving me the most accurate models
-
-
-if __name__ == '__main__':
-    main()
