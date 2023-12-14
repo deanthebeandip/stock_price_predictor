@@ -265,6 +265,47 @@ def grab_stock(symbol, start_date, end_date):
         return None
 
 
+
+def MA(df, days, param = 'Close'):
+    history = len(df)
+    price_list, ma, fill= df[param], [], [0] * days
+    for i in range(0, history-days):
+        tempsum = 0
+        for n in range(days):
+            tempsum += price_list[n+i]
+        ma.append(round((tempsum/days), 6))
+
+    df['MA'+str(days)] = fill + ma
+    
+    return df
+
+
+    
+def display_trends(prices):
+    figure(figsize=(20, 6), dpi=80)
+
+    trend_list = prices.columns.tolist()
+
+    for trend in trend_list:
+        plt.plot(prices.index, prices[trend])
+
+    
+    # This will divide the dates by n amount
+    n_ticks = 5
+    x_ticks_positions = range(0, len(prices.index), n_ticks)
+    x_ticks_labels = prices.index[x_ticks_positions]
+
+    plt.xticks(x_ticks_labels)
+
+
+
+
+    plt.grid(axis = 'x')
+    plt.legend(trend_list)
+    plt.show()
+
+
+
 def strat_picker(stock_list, history):
 
 
@@ -276,8 +317,16 @@ def strat_picker(stock_list, history):
 
         if prices is not None:
             print(f"Stock prices for {stock} from {start_date} to {end_date}:\n")
+
+            prices = prices.drop(['Open', 'High', 'Low', 'Adj Close', 'Volume'], axis=1)
+
+            # prices = prices.reset_index().rename(columns={'index': 'Dates'})
+
+            for i in range(4):
+                MA(prices, 15*(i+1), 'Close')
             print(prices)
-            print(type(prices))
+            display_trends(prices)
+
         else:
             print(f"Failed to retrieve stock prices for {stock}")
 
@@ -287,7 +336,7 @@ def strat_picker(stock_list, history):
 def main():
     #stock_list = ['VOO', 'AAPL', 'AMZN']
     stock_list = ['VOO']
-    history = 50
+    history = 1000
     strat_picker(stock_list, history)
 
 
