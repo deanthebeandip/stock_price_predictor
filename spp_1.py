@@ -297,9 +297,6 @@ def display_trends(prices):
 
     plt.xticks(x_ticks_labels)
 
-
-
-
     plt.grid(axis = 'x')
     plt.legend(trend_list)
     plt.show()
@@ -308,6 +305,7 @@ def display_trends(prices):
 
 def strat_picker(stock_list, history):
 
+    stock_perf = {}
 
     end_date = str(datetime.date.today())
     start_date = str(datetime.datetime.now() - datetime.timedelta(days = history))[:10]
@@ -316,27 +314,40 @@ def strat_picker(stock_list, history):
         prices = grab_stock(stock, start_date, end_date)
 
         if prices is not None:
+
+            
             print(f"Stock prices for {stock} from {start_date} to {end_date}:\n")
 
             prices = prices.drop(['Open', 'High', 'Low', 'Adj Close', 'Volume'], axis=1)
 
             # prices = prices.reset_index().rename(columns={'index': 'Dates'})
 
-            for i in range(4):
-                MA(prices, 15*(i+1), 'Close')
+            for i in range(5):
+                MA(prices, 10*(i+1), 'Close')
             print(prices)
             display_trends(prices)
+
+            # HERE IS WHERE I WILL RUN THE SIMULATIONS/STRATS
+            
+            strat_list = [1, 4]
+            for strat in strat_list:
+                perf_report = []
+
+            stock_perf[stock] = perf_report
 
         else:
             print(f"Failed to retrieve stock prices for {stock}")
 
 
+    print(perf_report)
+
+
 
 
 def main():
-    #stock_list = ['VOO', 'AAPL', 'AMZN']
-    stock_list = ['VOO']
-    history = 1000
+    stock_list = ['VOO', 'AAPL', 'AMZN']
+    # stock_list = ['VOO']
+    history = 1000             #how many days back
     strat_picker(stock_list, history)
 
 
